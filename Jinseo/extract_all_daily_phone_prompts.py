@@ -31,6 +31,7 @@ for date in os.listdir(sub_path):
             steps_df = pd.read_csv(os.path.join(sub_path, steps_path))
 
             # considering edge case where single day has more than 1 daily reports
+            #print(int(steps_df['TOTAL_STEPS'].iloc[0]))
             step_counts += [steps_df['TOTAL_STEPS']] * len(filtered_rows)
 
         # Append the filtered DataFrame to the list
