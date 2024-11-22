@@ -48,5 +48,5 @@ print(step_counts[:20])
 print(len(final_filtered_data))
 print(daily_report_counts)
 
-filename = subject_name + '_all_daily_reports.csv'
+filename = subject_name + '_all_daily_reports_updated.csv'
 final_filtered_data.to_csv(filename)
