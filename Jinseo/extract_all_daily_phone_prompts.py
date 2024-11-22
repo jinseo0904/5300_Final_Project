@@ -43,6 +43,7 @@ final_filtered_data = pd.concat(filtered_dfs, ignore_index=True)
 assert len(final_filtered_data) == len(step_counts)
 final_filtered_data['Steps'] = step_counts
 
+print(step_counts[:20])
 # Display the resulting DataFrame
 print(len(final_filtered_data))
 print(daily_report_counts)
