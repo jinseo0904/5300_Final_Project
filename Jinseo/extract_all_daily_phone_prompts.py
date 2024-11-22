@@ -1,0 +1,38 @@
+import os
+import pandas as pd
+
+# NOTE: change the subject name field here
+subject_name = 'feistydaycarelung@timestudy_com'
+time_study_path = '/work/mhealthresearchgroup/TIME_STD/time_study_preprocess/intermediate_file/'
+sub_path = os.path.join(time_study_path, subject_name)
+
+# Initialize an empty list to hold filtered DataFrames
+filtered_dfs = []
+daily_report_counts = 0
+
+for date in os.listdir(sub_path):
+    date_folder = os.path.join(sub_path, date)
+    target_phone_filename = f'phone_promptresponse_clean_{date}.csv'
+    phone_path = date + '/' + target_phone_filename
+
+    # check if phone prompt response csv file exists
+    if os.path.isfile(os.path.join(sub_path, phone_path)):
+        #print(f'Phone prompt exists for date {date}')
+
+        # check if the daily reports exists
+        df = pd.read_csv(os.path.join(sub_path, phone_path))
+        filtered_rows = df[(df['Prompt_Type'] == 'Daily') & (df['Answer_Status'] == 'Completed')]
+        daily_report_counts += len(filtered_rows)
+
+        # Append the filtered DataFrame to the list
+        filtered_dfs.append(filtered_rows)
+
+# Concatenate all filtered DataFrames into a single DataFrame
+final_filtered_data = pd.concat(filtered_dfs, ignore_index=True)
+
+# Display the resulting DataFrame
+print(len(final_filtered_data))
+print(daily_report_counts)
+
+filename = subject_name + '_all_daily_reports.csv'
+final_filtered_data.to_csv(filename)
