@@ -32,7 +32,7 @@ for date in os.listdir(sub_path):
 
             # considering edge case where single day has more than 1 daily reports
             #print(int(steps_df['TOTAL_STEPS'].iloc[0]))
-            step_counts += [steps_df['TOTAL_STEPS']] * len(filtered_rows)
+            step_counts += [int(steps_df['TOTAL_STEPS'].iloc[0])] * len(filtered_rows)
 
         # Append the filtered DataFrame to the list
         filtered_dfs.append(filtered_rows)
