@@ -6,7 +6,7 @@ physical activity, and mobile phone usage using the TIME study dataset.
 """
 
 import logging
-from typing import Optional, Tuple
+from typing import Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -42,8 +42,12 @@ class TimeStudyProcessor:
         Returns:
             Processed EMA DataFrame
         """
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, low_memory=False)
+        # Split off the timezone abbreviation and keep just the datetime part
+        df['Initial_Prompt_Local_Time'] = df['Initial_Prompt_Local_Time'].apply(lambda x: x.rsplit(' ', 1)[0])
         df['Initial_Prompt_Local_Time'] = pd.to_datetime(df['Initial_Prompt_Local_Time'])
+
+        df['timezone_offset'] = df['Initial_Prompt_UTC_Offset ']
 
         # Filter completed responses
         df = df[df['Answer_Status'].isin(['Completed', 'CompletedThenDismissed'])]
@@ -54,7 +58,8 @@ class TimeStudyProcessor:
             response_dict = {
                 'timestamp': row['Initial_Prompt_Local_Time'],
                 'prompt_type': row['Prompt_Type'],
-                'study_mode': row['Study_Mode']
+                'study_mode': row['Study_Mode'],
+                'timezone_offset': row['timezone_offset']
             }
 
             question_count = row['Number_Of_Questions_Presented']
@@ -73,21 +78,21 @@ class TimeStudyProcessor:
         return self.ema_data
 
     def load_activity_data(self, file_path: str) -> pd.DataFrame:
-        """Load and process physical activity data.
-
-        Args:
-            file_path: Path to the activity data file
-
-        Returns:
-            Processed activity DataFrame
         """
+        Load and process physical activity data.
+        """
+        # Load data
         df = pd.read_csv(file_path)
 
+        # Create timestamp from separate YEAR, MONTH, DAY columns
         df['timestamp'] = pd.to_datetime(
-            df['YEAR_MONTH_DAY'] + ' ' +
+            df['YEAR'].astype(str) + '-' +
+            df['MONTH'].astype(str).str.zfill(2) + '-' +
+            df['DAY'].astype(str).str.zfill(2) + ' ' +
             df['HOUR'].astype(str).str.zfill(2) + ':00:00'
         )
 
+        # Create activity features using the actual column names
         activity_features = {
             'timestamp': df['timestamp'],
             'total_activity': df['MIMS_SUM'],
@@ -96,40 +101,43 @@ class TimeStudyProcessor:
             'wear_activity': df['MIMS_SUM_WEAR'],
             'sleep_activity': df['MIMS_SUM_SLEEP'],
             'nonwear_activity': df['MIMS_SUM_NONWEAR'],
-            'wear_minutes': df['MIMS_SAMPLE_NUM_WEAR'] / 60,
-            'sleep_minutes': df['MIMS_SAMPLE_NUM_SLEEP'] / 60,
-            'nonwear_minutes': df['MIMS_SAMPLE_NUM_NONWEAR'] / 60
+            'wear_minutes': df['MIMS_SAMPLE_NUM_WEAR'],
+            'sleep_minutes': df['MIMS_SAMPLE_NUM_SLEEP'],
+            'nonwear_minutes': df['MIMS_SAMPLE_NUM_NONWEAR']
         }
 
         self.activity_data = pd.DataFrame(activity_features)
         self.activity_data.set_index('timestamp', inplace=True)
         return self.activity_data
 
-    def load_phone_usage_data(
-        self,
-        app_usage_file: str,
-        screen_events_file: Optional[str] = None
-    ) -> pd.DataFrame:
-        """Load and process phone usage data.
-
-        Args:
-            app_usage_file: Path to the app usage data file
-            screen_events_file: Optional path to screen events file
-
-        Returns:
-            Processed phone usage DataFrame
+    def load_phone_usage_data(self, app_usage_file: str, screen_events_file: str = None) -> pd.DataFrame:
         """
+        Load and process phone usage data.
+        """
+        # Process app usage data
         app_df = pd.read_csv(app_usage_file)
-        app_df['START_TIME'] = pd.to_datetime(app_df['START_TIME'])
-        app_df['STOP_TIME'] = pd.to_datetime(app_df['STOP_TIME'])
 
+        # Extract datetime without timezone
+        def clean_timestamp(ts):
+            try:
+                # Split on space and take everything except the timezone
+                return pd.to_datetime(' '.join(str(ts).split()[:-1]))
+            except (ValueError, TypeError):
+                return pd.NaT
+
+        # Clean timestamps
+        app_df['START_TIME'] = app_df['START_TIME'].apply(clean_timestamp)
+        app_df['STOP_TIME'] = app_df['STOP_TIME'].apply(clean_timestamp)
+
+        # Create hourly app usage features
         hourly_usage = self._process_app_usage(app_df)
 
         if screen_events_file:
             events_df = pd.read_csv(screen_events_file)
-            events_df['LOG_TIME'] = pd.to_datetime(events_df['LOG_TIME'])
+            events_df['LOG_TIME'] = events_df['LOG_TIME'].apply(clean_timestamp)
             screen_events = self._process_screen_events(events_df)
 
+            # Merge app usage and screen events
             self.phone_usage_data = pd.merge(
                 hourly_usage,
                 screen_events,
@@ -143,15 +151,8 @@ class TimeStudyProcessor:
         return self.phone_usage_data
 
     def _process_app_usage(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Process app usage data.
-
-        Args:
-            df: Raw app usage DataFrame
-
-        Returns:
-            Processed hourly app usage metrics
-        """
-        df['hour'] = df['START_TIME'].dt.floor('H')
+        """Process app usage data."""
+        df['hour'] = df['START_TIME'].dt.floor('h')
 
         hourly_metrics = df.groupby('hour').agg({
             'USAGE_DURATION_MIN': 'sum',
@@ -164,14 +165,7 @@ class TimeStudyProcessor:
         return hourly_metrics
 
     def _process_screen_events(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Process screen events data.
-
-        Args:
-            df: Raw screen events DataFrame
-
-        Returns:
-            Processed hourly screen events metrics
-        """
+        """Process screen events data."""
         df['hour'] = df['LOG_TIME'].dt.floor('H')
 
         screen_metrics = pd.DataFrame()
