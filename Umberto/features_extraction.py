@@ -10,6 +10,7 @@ from typing import Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy import stats
 import seaborn as sns
 
 
@@ -133,7 +134,7 @@ class TimeStudyProcessor:
         hourly_usage = self._process_app_usage(app_df)
 
         if screen_events_file:
-            events_df = pd.read_csv(screen_events_file)
+            events_df = pd.read_csv(screen_events_file, low_memory=False)
             events_df['LOG_TIME'] = events_df['LOG_TIME'].apply(clean_timestamp)
             screen_events = self._process_screen_events(events_df)
 
@@ -166,7 +167,7 @@ class TimeStudyProcessor:
 
     def _process_screen_events(self, df: pd.DataFrame) -> pd.DataFrame:
         """Process screen events data."""
-        df['hour'] = df['LOG_TIME'].dt.floor('H')
+        df['hour'] = df['LOG_TIME'].dt.floor('h')
 
         screen_metrics = pd.DataFrame()
 
@@ -200,6 +201,159 @@ class StressAnalyzer(TimeStudyProcessor):
             'worry': ['How worried are you right now?']
         }
 
+    def process_stress_responses(self) -> pd.DataFrame:
+        """Extract and process stress/anxiety related responses from EMA data.
+
+        Returns:
+            DataFrame containing processed stress responses
+        """
+        if self.ema_data is None:
+            raise ValueError("Please load EMA data first")
+
+        stress_responses = []
+
+        # Get the timestamp from the index since we set it during load_ema_data
+        for idx, row in self.ema_data.iterrows():
+            # Initialize response with the current timestamp
+            response = {}
+            found_stress_question = False
+
+            # Look through all questions in this EMA
+            for i in range(1, 50):  # Based on codebook structure
+                q_text = row.get(f'Question_{i}_Text')
+                q_answer = row.get(f'Question_{i}_Answer_Text ')  # Note the space after Text
+
+                if pd.notna(q_text) and pd.notna(q_answer):
+                    # Match question to stress/anxiety categories
+                    for category, patterns in self.stress_questions.items():
+                        if any(pattern.lower() in str(q_text).lower() for pattern in patterns):
+                            normalized_answer = self._normalize_response(q_answer)
+                            if not pd.isna(normalized_answer):
+                                response[category] = normalized_answer
+                                found_stress_question = True
+
+            # Only add responses that have at least one stress measure
+            if found_stress_question:
+                stress_responses.append({
+                    'timestamp': idx,  # Add timestamp from the index
+                    **response        # Unpack the stress responses
+                })
+
+        if not stress_responses:
+            raise ValueError("No stress/anxiety responses found in the data")
+
+        # Create DataFrame and set index
+        stress_df = pd.DataFrame(stress_responses)
+        return stress_df.set_index('timestamp')
+
+    def _merge_stress_with_features(
+        self,
+        stress_data: pd.DataFrame,
+        features: pd.DataFrame,
+        window: str = '1H'
+    ) -> pd.DataFrame:
+        """Merge stress measurements with feature data.
+
+        Args:
+            stress_data: DataFrame containing stress measurements
+            features: DataFrame containing feature data
+            window: Time window for aggregating features
+
+        Returns:
+            Merged DataFrame
+        """
+        # Resample features to hourly data
+        features_hourly = features.resample(window).mean()
+
+        # For each stress measure, find the corresponding feature values
+        merged_data = []
+
+        for stress_idx in stress_data.index:
+            # Get feature values within the window before the stress measurement
+            window_start = stress_idx - pd.Timedelta(window)
+            window_features = features_hourly.loc[window_start:stress_idx].mean()
+
+            if not window_features.empty:
+                row_data = {
+                    'timestamp': stress_idx,
+                    **stress_data.loc[stress_idx].to_dict(),
+                    **window_features.to_dict()
+                }
+                merged_data.append(row_data)
+
+        return pd.DataFrame(merged_data)
+
+    def create_feature_matrix(self, window_size: str = '1H') -> pd.DataFrame:
+        """Create combined feature matrix.
+
+        Args:
+            window_size: Time window for feature aggregation
+
+        Returns:
+            Feature matrix DataFrame
+        """
+        if any(data is None for data in [self.activity_data, self.phone_usage_data]):
+            raise ValueError("Please load all required data first")
+
+        # Create base feature matrix using activity data timepoints
+        feature_matrix = self.activity_data.copy()
+
+        # Add phone usage features
+        feature_matrix = feature_matrix.join(self.phone_usage_data)
+
+        # Create rolling window features
+        feature_matrix['activity_1h_avg'] = feature_matrix['total_activity'].rolling(window='1h').mean()
+        feature_matrix['activity_3h_avg'] = feature_matrix['total_activity'].rolling(window='3h').mean()
+        feature_matrix['phone_usage_1h_avg'] = feature_matrix['total_usage_minutes'].rolling(window='1h').mean()
+        feature_matrix['phone_usage_3h_avg'] = feature_matrix['total_usage_minutes'].rolling(window='3h').mean()
+
+        # Add time-based features
+        feature_matrix['hour'] = feature_matrix.index.hour
+        feature_matrix['day_of_week'] = feature_matrix.index.dayofweek
+        feature_matrix['is_weekend'] = feature_matrix['day_of_week'].isin([5, 6]).astype(int)
+
+        return feature_matrix
+
+    def _calculate_feature_correlations(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Calculate correlations between stress/anxiety and all features.
+
+        Args:
+            data: Merged DataFrame containing stress measures and features
+
+        Returns:
+            DataFrame containing correlation results
+        """
+        stress_measures = list(self.stress_questions.keys())
+        feature_cols = [col for col in data.columns
+                        if col not in stress_measures + ['timestamp']]
+
+        correlations = []
+
+        for stress_measure in stress_measures:
+            if stress_measure not in data.columns:
+                continue
+
+            for feature in feature_cols:
+                # Remove any missing values
+                valid_data = data[[stress_measure, feature]].dropna()
+
+                if len(valid_data) < 2:
+                    continue
+
+                # Calculate Pearson correlation
+                correlation = stats.pearsonr(valid_data[stress_measure],
+                                             valid_data[feature])
+
+                correlations.append({
+                    'stress_measure': stress_measure,
+                    'feature': feature,
+                    'correlation': correlation[0],
+                    'p_value': correlation[1],
+                    'n_samples': len(valid_data)
+                })
+
+        return pd.DataFrame(correlations)
+
     def _normalize_response(self, response: str) -> float:
         """Normalize different response formats to a 0-100 scale.
 
@@ -228,7 +382,7 @@ class StressAnalyzer(TimeStudyProcessor):
 
     def analyze_correlations(
         self,
-        feature_window: str = '1H'
+        feature_window: str = '1h'
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """Analyze correlations between stress/anxiety and features.
 
