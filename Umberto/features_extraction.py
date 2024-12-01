@@ -212,25 +212,26 @@ class StressAnalyzer(TimeStudyProcessor):
 
         stress_responses = []
 
-        # Get the timestamp from the index since we set it during load_ema_data
         for idx, row in self.ema_data.iterrows():
             # Initialize response with the current timestamp
             response = {}
             found_stress_question = False
 
             # Look through all questions in this EMA
-            for i in range(1, 50):  # Based on codebook structure
-                q_text = row.get(f'Question_{i}_Text')
-                q_answer = row.get(f'Question_{i}_Answer_Text ')  # Note the space after Text
+            for col in row.index:
+                if 'Question_' in col and '_Text' in col:
+                    i = col.split('_')[1]
+                    q_text = row[f'Question_{i}_Text']
+                    q_answer = row[f'Question_{i}_Answer_Text']
 
-                if pd.notna(q_text) and pd.notna(q_answer):
-                    # Match question to stress/anxiety categories
-                    for category, patterns in self.stress_questions.items():
-                        if any(pattern.lower() in str(q_text).lower() for pattern in patterns):
-                            normalized_answer = self._normalize_response(q_answer)
-                            if not pd.isna(normalized_answer):
-                                response[category] = normalized_answer
-                                found_stress_question = True
+                    if pd.notna(q_text) and pd.notna(q_answer):
+                        # Match question to stress/anxiety categories
+                        for category, patterns in self.stress_questions.items():
+                            if any(pattern.lower() in str(q_text).lower() for pattern in patterns):
+                                normalized_answer = self._normalize_response(q_answer)
+                                if not pd.isna(normalized_answer):
+                                    response[category] = normalized_answer
+                                    found_stress_question = True
 
             # Only add responses that have at least one stress measure
             if found_stress_question:
