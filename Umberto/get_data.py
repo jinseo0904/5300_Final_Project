@@ -67,13 +67,12 @@ def process_subject_data(subject_path: str) -> pd.DataFrame:
     activity_df = get_physical_activity()
     usage_df = get_phone_usage()
 
-    # Verify we have data from all sources
-    if not all([len(df) > 0 for df in [stress_df, activity_df, usage_df]]):
-        raise ValueError("Missing one or more required datasets")
-
     # Merge all data on hour
-    final_df = stress_df.merge(activity_df, on='hour', how='inner')\
-                        .merge(usage_df, on='hour', how='inner')
+    final_df = activity_df.merge(usage_df, on='hour', how='outer')
+
+    if len(stress_df) > 0:
+        stress_df.drop(columns=['Participant_ID'], inplace=True)
+        final_df = final_df.merge(stress_df, on='hour', how='left')
 
     return final_df
 
