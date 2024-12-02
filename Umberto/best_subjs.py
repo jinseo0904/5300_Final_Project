@@ -2,6 +2,7 @@ import pandas as pd
 import os
 from glob import glob
 from typing import Tuple
+from tqdm import tqdm
 
 
 def analyze_data_quality(base_path: str) -> pd.DataFrame:
@@ -27,7 +28,7 @@ def analyze_data_quality(base_path: str) -> pd.DataFrame:
 
             df_list = []
             for file in missingness_files:
-                df = pd.read_csv(file)
+                df = pd.read_csv(file, low_memory=False)
                 df_list.append(df)
 
             if not df_list:
@@ -120,7 +121,7 @@ def analyze_data_quality(base_path: str) -> pd.DataFrame:
     subject_dirs = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
 
     results = []
-    for subject_id in subject_dirs:
+    for subject_id in tqdm(subject_dirs, desc="Processing subjects"):
         watch_completeness, watch_minutes = get_watch_data_completeness(subject_id)
         phone_ema_rate, watch_ema_rate, total_emas = get_ema_completeness(subject_id)
         days_with_usage, usage_events = get_phone_usage_data(subject_id)
@@ -155,7 +156,7 @@ def get_top_subjects(df: pd.DataFrame, n: int = 10) -> pd.DataFrame:
 # Usage example:
 if __name__ == "__main__":
     # Replace with your actual data path
-    DATA_PATH = "/media/umberto/T7/intermediate_file/"
+    DATA_PATH = "/Volumes/T7/intermediate_file"
 
     # Analyze all subjects
     quality_df = analyze_data_quality(DATA_PATH)
@@ -167,5 +168,5 @@ if __name__ == "__main__":
     print(top_subjects.to_string())
 
     # Save results to CSV
-    quality_df.to_csv("data_quality_analysis.csv", index=False)
+    # quality_df.to_csv("data_quality_analysis.csv", index=False)
     top_subjects.to_csv("top_10_subjects.csv", index=False)
