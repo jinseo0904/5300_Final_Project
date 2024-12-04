@@ -156,7 +156,7 @@ def get_top_subjects(df: pd.DataFrame, n: int = 10) -> pd.DataFrame:
 # Usage example:
 if __name__ == "__main__":
     # Replace with your actual data path
-    DATA_PATH = "/Volumes/T7/intermediate_file"
+    DATA_PATH = "/media/umberto/T7/intermediate_file"
 
     # Analyze all subjects
     quality_df = analyze_data_quality(DATA_PATH)
