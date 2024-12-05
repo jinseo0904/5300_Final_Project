@@ -1,0 +1,44 @@
+Question ID,Question Text
+Q10_FOC,"Over the past day, I felt FOCUSED."
+Q11_RESIST,"Right now, I feel IN CONTROL."
+Q12_PROC,"Over the past day, I PROCRASTINATED."
+Q13_DEM,"Over the past day, I felt like I couldn’t get everything done."
+Q14_ROUT,"Over the past day, I followed my usual routine."
+Q15_SICK,I was sick or ill today.
+Q16_MISS,I missed or took time off from work or school today.
+Q17_TRAVEL,I traveled away from home today.
+Q18_AFFMOT_PA,I FEEL like going on a walk or exercising in the next hour.
+Q19_AFFMOT_PA,I FEEL like going on a walk or exercising tomorrow.
+Q19_DEL_PA_5,I am going to take a walk or exercise in the next hour.
+Q1_SAD,"Over the past day, how SAD did you feel?"
+Q20_AFFMOT_SED,I FEEL like taking a break from sitting in the next hour.
+Q21_DEL_SED,I am going to take a break from sitting in the next hours.
+Q21_GOAL_PA,I have a goal for how much walking or exercise I want to do this week
+Q22_AFFMOT_EAT,I FEEL like eating healthy foods at my next meal
+Q22_PLAN_PA,I have a plan for how I am going to do some walking or exercise tomorrow.
+Q23_DAILY_GOAL_PA,I was able to achieve my walking/exercise goals today
+Q23_DEL_EAT,I am going to eat healthy foods at my next meal.
+Q24_ENGAGE,How disruptive was this survey?
+Q24_PA_WEEK_GOAL,"Over the past week, I have been able to achieve my walking/exercise goals"
+Q25_AFFMOT_SLEEP,I FEEL like going to sleep in the next two hours
+Q27_DEL_SLEEP,I am going to go to sleep in the next two hours.
+Q28_GOAL_SLEEP,I have a goal for how much sleep I want to get this week.
+Q2_HAPP,"Over the past day, how HAPPY did you feel?"
+Q30_AFFMOT_SED,I FEEL like sitting less tomorrow.
+Q32_PLAN_SED,I have a plan for how I will sit less tomorrow
+Q33_GOAL_SED,I have a goal for how much I will limit my sitting this week
+Q34_AFFMOT_EAT,I FEEL like eating healthy tomorrow.
+Q36_PLAN_EAT,I have a plan for how I am going to eat healthy foods tomorrow
+Q37_GOAL_EAT,I have a goal for what type of healthy foods I want to eat this week
+Q38_COVID_LONELY,"Over the past week, how much were you lonely?"
+Q39_COVID_PH,"Over the past week, to what extent has the COVID-19 situation affected your physical health?"
+Q3_FATIG,"Over the past day, how FATIGUED did you feel?"
+Q4_EN,"Over the past day, how ENERGETIC did you feel?"
+Q52_COVID_IMPACT,"Over the past week, what has been the overall level of impact to your daily life due to the COVID-19 (coronavirus) outbreak?"
+Q53_COVID_STRESS,"Over the past week, what has been your overall level of stress related to the COVID-19 (coronavirus) outbreak?"
+Q54_ENGAGE,Answering surveys on my phone was disruptive today.
+Q5_REL,"Right now, how RELAXED do you feel?"
+Q6_TEN,"Over the past day, how TENSE did you feel?"
+Q7_STRESS,"Over the past day, how STRESSED did you feel?"
+Q8_FRUST,"Over the past day,  how FRUSTRATED do you feel?"
+Q9_NERV,"Over the past day, how  NERVOUS did you feel?"
