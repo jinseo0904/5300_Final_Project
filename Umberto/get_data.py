@@ -24,8 +24,21 @@ WATCH_QUESTIONS_OF_INTEREST = {
     'nervous_4', 'trait_31'
 }
 
+PHONE_QUESTIONS_OF_INTEREST = {
+    'Q9_NERV', 'Q8_FRUST', 'Q7_STRESS', 'Q6_TEN', 'Q5_REL', 'Q2_HAPP',
+    'Q1_SAD', 'Q15_SICK', 'Q3_FATIG', 'Q4_EN'
+}
+
+RESPONSE_MAP_PHONE = {
+    'Not at all': 1,
+    'A little': 2,
+    'Moderately': 3,
+    'Quite a bit': 4,
+    'Extremely': 5
+}
+
 # Map responses to numeric values for analysis
-RESPONSE_MAP = {
+RESPONSE_MAP_WATCH = {
     'yes': 5,
     'frequently': 5,
     'sort of': 4,
@@ -54,7 +67,7 @@ class TimeStudyProcessor:
     def _process_datetime(self, time_str: str) -> pd.Timestamp:
         """Process datetime string by removing timezone abbreviation"""
         # Remove all possible US timezone abbreviations
-        for tz in ['EDT', 'EST', 'CDT', 'CST', 'MDT', 'MST', 'PDT', 'PST']:
+        for tz in ['EDT', 'EST', 'CDT', 'CST', 'MDT', 'MST', 'PDT', 'PST', 'HST', 'AKST', 'AKDT', 'MSK']:
             time_str = time_str.replace(tz, '')
         return pd.to_datetime(time_str.strip())
 
@@ -76,7 +89,7 @@ class TimeStudyProcessor:
         swan_df = self._read_and_process_swan(subject_path)
         screen_df = self._read_and_process_screen(subject_path)
         social_media_df = self._read_and_process_social_media(subject_path)
-        # phone_ema_df = self._read_and_process_phone_ema(subject_path)
+        phone_ema_df = self._read_and_process_phone_ema(subject_path)
         watch_ema_df = self._read_and_process_watch_ema(subject_path)
 
         # Combine all metrics
@@ -87,7 +100,7 @@ class TimeStudyProcessor:
             swan_df,
             screen_df,
             social_media_df,
-            # phone_ema_df,
+            phone_ema_df,
             watch_ema_df
         )
 
@@ -142,22 +155,61 @@ class TimeStudyProcessor:
 
         return pd.DataFrame()
 
-    # def _read_and_process_phone_ema(self, subject_path: Path) -> pd.DataFrame:
-    #     """Process phone EMA responses"""
-    #     df = self._read_csv_safe(subject_path / "phone_promptresponse.csv")
-    #     if df.empty:
-    #         return pd.DataFrame()
+    def _read_and_process_phone_ema(self, subject_path: Path) -> pd.DataFrame:
+        """Process phone EMA responses for specific mood/emotion questions"""
+        df = self._read_csv_safe(subject_path / "phone_promptresponse.csv")
+        if df.empty:
+            return pd.DataFrame()
 
-    #     # Filter for completed responses
-    #     df = df[df['Answer_Status'] == 'Completed'].copy()
+        # Filter for completed responses
+        df = df[df['Answer_Status'] == 'Completed'].copy()
 
-    #     # Convert timestamp to date
-    #     df['date'] = df['Initial_Prompt_Local_Time'].apply(self._process_datetime).dt.date
+        if df.empty:
+            return pd.DataFrame()
 
-    #     # Aggregate by date - counting responses
-    #     daily_ema = df.groupby('date').size().reset_index(name='phone_ema_count')
+        # Create date from timestamp
+        df['date'] = df['Initial_Prompt_Local_Time'].apply(self._process_datetime).dt.date
 
-    #     return daily_ema
+        responses = []
+        # Process each row
+        for _, row in df.iterrows():
+            # Find all question columns
+            id_cols = [col for col in row.index if col.startswith('Question_') and col.endswith('_ID')]
+            answer_cols = [col.replace('_ID', '_Answer_Text') for col in id_cols]
+
+            # Check each question-answer pair
+            for q_id_col, ans_col in zip(id_cols, answer_cols):
+                q_id = row[q_id_col]
+                if q_id in PHONE_QUESTIONS_OF_INTEREST:
+                    answer = row[ans_col]
+                    if answer in RESPONSE_MAP_PHONE:
+                        responses.append({
+                            'date': row['date'],
+                            'question': q_id,
+                            'value': RESPONSE_MAP_PHONE[answer]
+                        })
+
+        if not responses:
+            return pd.DataFrame()
+
+        # Create DataFrame from responses
+        responses_df = pd.DataFrame(responses)
+
+        # Pivot to get one column per question
+        daily_ema = responses_df.pivot_table(
+            index='date',
+            columns='question',
+            values='value',
+            aggfunc='mean'
+        ).reset_index()
+
+        # Rename columns to add _response suffix
+        daily_ema.columns = [
+            'date' if col == 'date' else f'{col}_response'
+            for col in daily_ema.columns
+        ]
+
+        return daily_ema
 
     def _read_and_process_watch_ema(self, subject_path: Path) -> pd.DataFrame:
         """Process watch EMA responses for specific questions"""
@@ -180,7 +232,7 @@ class TimeStudyProcessor:
             df['date'] = pd.to_datetime(df['Question_X_Answer_Unixtime'], unit='ms').dt.date
 
             # Map answers to numeric values
-            df['answer_value'] = df['Question_X_Answer_Text '].str.lower().map(RESPONSE_MAP)
+            df['answer_value'] = df['Question_X_Answer_Text '].str.lower().map(RESPONSE_MAP_WATCH)
 
             # Drop rows where mapping failed
             df = df.dropna(subset=['answer_value'])
@@ -219,7 +271,7 @@ class TimeStudyProcessor:
                                swan_df: pd.DataFrame,
                                screen_df: pd.DataFrame,
                                social_media_df: pd.DataFrame,
-                               # phone_ema_df: pd.DataFrame,
+                               phone_ema_df: pd.DataFrame,
                                watch_ema_df: pd.DataFrame
                                ) -> pd.DataFrame:
         """Combine all metrics into a single daily DataFrame"""
@@ -249,7 +301,7 @@ class TimeStudyProcessor:
             (swan_df, ''),
             (screen_df, ''),
             (social_media_df, '_social_media'),
-            # (phone_ema_df, ''),
+            (phone_ema_df, ''),
             (watch_ema_df, '')
         ]
 
