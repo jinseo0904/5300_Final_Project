@@ -16,39 +16,31 @@ def analyze_data_quality(base_path: str) -> pd.DataFrame:
         DataFrame with subject-level quality metrics
     """
 
-    def get_watch_data_completeness(subject_id: str) -> Tuple[float, int]:
+    def get_watch_data_completeness(subject_id: str) -> float:
         """
         Analyzes watch accelerometer data completeness from missingness report
         """
         try:
             # Read missingness report
-            missingness_files = glob(os.path.join(base_path, subject_id, "*watch_accel_missingness_report*.csv"))
-            if not missingness_files:
-                return 0.0, 0
+            # missingness_files = glob(os.path.join(base_path, subject_id, "*watch_accel_missingness_report*.csv"))
+            # if not missingness_files:
+            #     return 0.0
 
-            df_list = []
-            for file in missingness_files:
-                df = pd.read_csv(file, low_memory=False)
-                df_list.append(df)
+            required_files = [
+                "phone_detected_activity_day.csv",
+                "watch_accelerometer_mims_day.csv",
+                "watch_accelerometer_swan_day.csv"
+            ]
 
-            if not df_list:
-                return 0.0, 0
+            for file in required_files:
+                if not os.path.exists(os.path.join(base_path, subject_id, file)):
+                    # print("Subject and missing file: ", subject_id, file)
+                    return 0.0
 
-            df_combined = pd.concat(df_list)
-
-            # Calculate completeness
-            total_minutes = len(df_combined)
-            valid_minutes = len(df_combined[
-                ~df_combined['ACCEL_MISSING'] &
-                ~df_combined['WATCH_OFF'] &
-                ~df_combined['LOW_WATCH_BATTERY'] &
-                ~df_combined['WATCH_SYSTEM_TIME_BUG']
-            ])
-
-            return (valid_minutes / total_minutes * 100 if total_minutes > 0 else 0.0), total_minutes
+            return 100.0
         except Exception as e:
             print(f"Error processing watch data for subject {subject_id}: {str(e)}")
-            return 0.0, 0
+            return 0.0
 
     def get_ema_completeness(subject_id: str) -> Tuple[float, float, int]:
         """
@@ -122,26 +114,26 @@ def analyze_data_quality(base_path: str) -> pd.DataFrame:
 
     results = []
     for subject_id in tqdm(subject_dirs, desc="Processing subjects"):
-        watch_completeness, watch_minutes = get_watch_data_completeness(subject_id)
-        phone_ema_rate, watch_ema_rate, total_emas = get_ema_completeness(subject_id)
-        days_with_usage, usage_events = get_phone_usage_data(subject_id)
+        watch_completeness = get_watch_data_completeness(subject_id)
+        if watch_completeness == 100.0:
+            phone_ema_rate, watch_ema_rate, total_emas = get_ema_completeness(subject_id)
+            days_with_usage, usage_events = get_phone_usage_data(subject_id)
 
-        results.append({
-            'subject_id': subject_id,
-            'watch_data_completeness': watch_completeness,
-            'watch_total_minutes': watch_minutes,
-            'phone_ema_response_rate': phone_ema_rate,
-            'watch_ema_response_rate': watch_ema_rate,
-            'total_emas': total_emas,
-            'days_with_phone_data': days_with_usage,
-            'phone_usage_events': usage_events,
-            # Composite score (you can adjust weights as needed)
-            'data_quality_score': (
-                0.4 * watch_completeness +
-                0.3 * phone_ema_rate +
-                0.3 * watch_ema_rate
-            )
-        })
+            results.append({
+                'subject_id': subject_id,
+                'watch_data_completeness': watch_completeness,
+                'phone_ema_response_rate': phone_ema_rate,
+                'watch_ema_response_rate': watch_ema_rate,
+                'total_emas': total_emas,
+                'days_with_phone_data': days_with_usage,
+                'phone_usage_events': usage_events,
+                # Composite score (you can adjust weights as needed)
+                'data_quality_score': (
+                    0.4 * watch_completeness +
+                    0.3 * phone_ema_rate +
+                    0.3 * watch_ema_rate
+                )
+            })
 
     return pd.DataFrame(results)
 

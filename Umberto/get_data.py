@@ -203,9 +203,9 @@ class TimeStudyProcessor:
             aggfunc='mean'
         ).reset_index()
 
-        # Rename columns to add _response suffix
+        # Rename columns
         daily_ema.columns = [
-            'date' if col == 'date' else f'{col}_response'
+            'date' if col == 'date' else f'{col}'
             for col in daily_ema.columns
         ]
 
@@ -248,9 +248,9 @@ class TimeStudyProcessor:
                 aggfunc='mean'
             ).reset_index()
 
-            # Rename columns to add _response suffix
+            # Rename columns
             daily_ema.columns = [
-                'date' if col == 'date' else f'{col}_response'
+                'date' if col == 'date' else f'{col}'
                 for col in daily_ema.columns
             ]
 
@@ -326,7 +326,7 @@ class TimeStudyProcessor:
 
 
 def main():
-    subjects_file = Path("Umberto/data/top_10_subjects.csv")
+    subjects_file = Path("Umberto/top_10_subjects.csv")
     data_root = Path("/media/umberto/T7/intermediate_file")
 
     processor = TimeStudyProcessor(subjects_file, data_root)
