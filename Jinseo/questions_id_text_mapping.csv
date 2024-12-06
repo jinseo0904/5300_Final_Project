@@ -1,0 +1,14 @@
+ID,Text
+Q1_SAD,"Over the past day, how SAD did you feel?"
+Q2_HAPP,"Over the past day, how HAPPY did you feel?"
+Q3_FATIG,"Over the past day, how FATIGUED did you feel?"
+Q4_EN,"Over the past day, how ENERGETIC did you feel?"
+Q5_REL,"Over the past day, how RELAXED did you feel?"
+Q6_TEN,"Over the past day, how TENSE did you feel?"
+Q7_STRESS,"Over the past day, how STRESSED did you feel?"
+Q8_FRUST,"Over the past day,  how FRUSTRATED do you feel?"
+Q9_NERV,"Over the past day, how  NERVOUS did you feel?"
+Q11_RESIST,"Over the past day, I felt like I could RESIST doing things that aren’t good for me."
+Q12_PROC,"Over the past day, I PROCRASTINATED."
+Q13_DEM,"Over the past day, I felt like I couldn’t get everything done."
+Q15_SICK,I was sick or ill today.
