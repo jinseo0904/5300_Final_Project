@@ -1,0 +1,100 @@
+{
+    "Q1_SAD": {
+      "Not at all": 0,
+      "A little": 1,
+      "Moderately": 2,
+      "Quite a bit": 3,
+      "Extremely": 4
+    },
+    "Q2_HAPP": {
+      "Not at all": 4,
+      "A little": 3,
+      "Moderately": 2,
+      "Quite a bit": 1,
+      "Extremely": 0
+    },
+    "Q3_FATIG": {
+      "Not at all": 0,
+      "A little": 1,
+      "Moderately": 2,
+      "Quite a bit": 3,
+      "Extremely": 4
+    },
+    "Q4_EN": {
+      "Not at all": 4,
+      "A little": 3,
+      "Moderately": 2,
+      "Quite a bit": 1,
+      "Extremely": 0
+    },
+    "Q5_REL": {
+      "Not at all": 4,
+      "A little": 3,
+      "Moderately": 2,
+      "Quite a bit": 1,
+      "Extremely": 0
+    },
+    "Q6_TEN": {
+      "Not at all": 0,
+      "A little": 1,
+      "Moderately": 2,
+      "Quite a bit": 3,
+      "Extremely": 4
+    },
+    "Q7_STRESS": {
+      "Not at all": 0,
+      "A little": 1,
+      "Moderately": 2,
+      "Quite a bit": 3,
+      "Extremely": 4
+    },
+    "Q8_FRUST": {
+      "Not at all": 0,
+      "A little": 1,
+      "Moderately": 2,
+      "Quite a bit": 3,
+      "Extremely": 4
+    },
+    "Q9_NERV": {
+      "Not at all": 0,
+      "A little": 1,
+      "Moderately": 2,
+      "Quite a bit": 3,
+      "Very much so": 4
+    },
+    "Q10_FOC": {
+      "Not at all": 4,
+      "A little": 3,
+      "Moderately": 2,
+      "Quite a bit": 1,
+      "Very much so": 0
+    },
+    "Q11_RESIST": {
+      "Not at all": 4,
+      "A little": 3,
+      "Moderately": 2,
+      "Quite a bit": 1,
+      "Very much so": 0
+    },
+    "Q12_PROC": {
+      "Not at all": 0,
+      "A little": 1,
+      "Moderately": 2,
+      "Quite a bit": 3,
+      "Very much so": 4
+    },
+    "Q13_DEM": {
+      "Not at all": 0,
+      "A little": 1,
+      "Moderately": 2,
+      "Quite a bit": 3,
+      "Very much so": 4
+    },
+    "Q14_ROUT": {
+      "Not at all": 4,
+      "A little": 3,
+      "Moderately": 2,
+      "Quite a bit": 1,
+      "Very much so": 0
+    }
+  }
