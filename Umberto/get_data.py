@@ -327,7 +327,7 @@ class TimeStudyProcessor:
 
 def main():
     subjects_file = Path("Umberto/top_10_subjects.csv")
-    data_root = Path("/media/umberto/T7/intermediate_file")
+    data_root = Path("/Volumes/T7/intermediate_file")
 
     processor = TimeStudyProcessor(subjects_file, data_root)
     processor.process_all_subjects()
