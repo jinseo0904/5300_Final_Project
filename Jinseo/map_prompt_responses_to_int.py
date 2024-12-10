@@ -9,6 +9,7 @@ with open('../question_answers_to_int_mapping.json') as f:
 questions = list(mood_mappings.keys())
 print(questions)
 
+
 # define custom function
 # Iterate through each row
 def fetch_answers(questionID, df):
@@ -27,7 +28,7 @@ def fetch_answers(questionID, df):
             # Check if there's a value immediately to the right
             if question_index + 2 < len(row_list):
                 value_to_right = row_list[question_index + 2]
-                #print(f"Row {index}: Value to the right of {questionID} is {value_to_right}")
+                # print(f"Row {index}: Value to the right of {questionID} is {value_to_right}")
                 answers_raw.append(value_to_right)
                 answers_mapped.append(mood_mappings[questionID].get(value_to_right, None))
             else:
@@ -35,11 +36,12 @@ def fetch_answers(questionID, df):
         else:
             print(f"Row {index}: {questionID} not found.")
 
-    #print(f"Found {len(answers_raw)} answers for {questionID}")
+    # print(f"Found {len(answers_raw)} answers for {questionID}")
     assert len(answers_raw) == len(df)
     assert len(answers_mapped) == len(df)
     colname = questionID + "_int"
     df[colname] = answers_mapped
+
 
 # EDIT this for different directories
 input_directory = '/Users/jinseokim/Downloads/NEU/HINF 5300/Final_Project/5300_Final_Project/phone-EMAs'
@@ -57,18 +59,18 @@ for file in os.listdir(input_directory):
         df = df[(df['Answer_Status'] == 'Completed') & (df['Prompt_Type'] == 'Daily')]
 
         # drop all columns beyond 'Question_19_Answer_Unixtime'
-        df = df.iloc[:, :df.columns.get_loc('Question_19_Answer_Unixtime')+1]
+        df = df.iloc[:, :df.columns.get_loc('Question_19_Answer_Unixtime') + 1]
 
         # map all questions to int, according to mapping json
         for q in questions:
             colname = q + "_int"
             if colname not in df.columns:
-                #print(f"Fetching {q}...")
+                # print(f"Fetching {q}...")
                 fetch_answers(q, df)
 
         # create a new column mood_score which is the sum of Q1_SAD_int through Q14_ROUT_int
         questions_int = [q + "_int" for q in questions]
-        df['mood_score'] = df[questions_int].sum(axis=1) 
+        df['mood_score'] = df[questions_int].sum(axis=1)
 
         # print mean and standard deviation of mood_score
         mean = df['mood_score'].mean()

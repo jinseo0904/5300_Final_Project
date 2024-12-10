@@ -49,10 +49,10 @@ def process_subject(subject_id: str, base_path: str) -> pd.DataFrame:
 
     # Detect 20-minute bug pattern
     missing_blocks = df[df['ACCEL_MISSING']].index.to_numpy()
-    for i in range(len(missing_blocks)-1):
-        block_length = missing_blocks[i+1] - missing_blocks[i]
+    for i in range(len(missing_blocks) - 1):
+        block_length = missing_blocks[i + 1] - missing_blocks[i]
         if 18 <= block_length <= 22 or (block_length % 20 <= 2 and block_length > 0):
-            df.loc[missing_blocks[i]:missing_blocks[i+1], '20_MIN_BUG'] = True
+            df.loc[missing_blocks[i]:missing_blocks[i + 1], '20_MIN_BUG'] = True
 
     # Select required columns
     required_cols = ['PARTICIPANT_ID', 'YEAR', 'MONTH', 'DAY', 'HOUR', 'MINUTE', 'ACCEL_MISSING',

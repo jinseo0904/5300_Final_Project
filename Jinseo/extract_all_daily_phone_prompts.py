@@ -18,7 +18,7 @@ for date in os.listdir(sub_path):
 
     # check if phone prompt response csv file exists
     if os.path.isfile(os.path.join(sub_path, phone_path)):
-        #print(f'Phone prompt exists for date {date}')
+        # print(f'Phone prompt exists for date {date}')
 
         # check if the daily reports exists
         df = pd.read_csv(os.path.join(sub_path, phone_path))
@@ -31,7 +31,7 @@ for date in os.listdir(sub_path):
             steps_df = pd.read_csv(os.path.join(sub_path, steps_path))
 
             # considering edge case where single day has more than 1 daily reports
-            #print(int(steps_df['TOTAL_STEPS'].iloc[0]))
+            # print(int(steps_df['TOTAL_STEPS'].iloc[0]))
             step_counts += [int(steps_df['TOTAL_STEPS'].iloc[0])] * len(filtered_rows)
 
         # Append the filtered DataFrame to the list

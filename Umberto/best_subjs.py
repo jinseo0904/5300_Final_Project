@@ -33,13 +33,15 @@ def analyze_data_quality(base_path: str) -> pd.DataFrame:
             ]
 
             for file in required_files:
-                if not os.path.exists(os.path.join(base_path, subject_id, file)):
+                if not os.path.exists(os.path.join(
+                        base_path, subject_id, file)):
                     # print("Subject and missing file: ", subject_id, file)
                     return 0.0
 
             return 100.0
         except Exception as e:
-            print(f"Error processing watch data for subject {subject_id}: {str(e)}")
+            print(
+                f"Error processing watch data for subject {subject_id}: {str(e)}")
             return 0.0
 
     def get_ema_completeness(subject_id: str) -> Tuple[float, float, int]:
@@ -48,7 +50,8 @@ def analyze_data_quality(base_path: str) -> pd.DataFrame:
         """
         try:
             # Phone EMAs
-            phone_files = glob(os.path.join(base_path, subject_id, "*phone_promptresponse*.csv"))
+            phone_files = glob(os.path.join(
+                base_path, subject_id, "*phone_promptresponse*.csv"))
             phone_responses = []
             for file in phone_files:
                 df = pd.read_csv(file, low_memory=False)
@@ -56,14 +59,16 @@ def analyze_data_quality(base_path: str) -> pd.DataFrame:
 
             if phone_responses:
                 phone_df = pd.concat(phone_responses)
-                phone_complete = len(phone_df[phone_df['Answer_Status'] == 'Completed'])
+                phone_complete = len(
+                    phone_df[phone_df['Answer_Status'] == 'Completed'])
                 phone_total = len(phone_df)
                 phone_rate = (phone_complete / phone_total * 100) if phone_total > 0 else 0.0
             else:
                 phone_rate, phone_total = 0.0, 0
 
             # Watch EMAs (μEMA)
-            watch_files = glob(os.path.join(base_path, subject_id, "*watch_promptresponse*.csv"))
+            watch_files = glob(os.path.join(
+                base_path, subject_id, "*watch_promptresponse*.csv"))
             watch_responses = []
             for file in watch_files:
                 df = pd.read_csv(file)
@@ -71,7 +76,8 @@ def analyze_data_quality(base_path: str) -> pd.DataFrame:
 
             if watch_responses:
                 watch_df = pd.concat(watch_responses)
-                watch_complete = len(watch_df[watch_df['Answer_Status'].isin(['Completed', 'CompletedThenDismissed'])])
+                watch_complete = len(watch_df[watch_df['Answer_Status'].isin(
+                    ['Completed', 'CompletedThenDismissed'])])
                 watch_total = len(watch_df)
                 watch_rate = (watch_complete / watch_total * 100) if watch_total > 0 else 0.0
             else:
@@ -87,7 +93,8 @@ def analyze_data_quality(base_path: str) -> pd.DataFrame:
         Analyzes phone usage data completeness
         """
         try:
-            usage_files = glob(os.path.join(base_path, subject_id, "*phone_app_usage*.csv"))
+            usage_files = glob(os.path.join(
+                base_path, subject_id, "*phone_app_usage*.csv"))
             if not usage_files:
                 return 0.0, 0
 
@@ -106,17 +113,20 @@ def analyze_data_quality(base_path: str) -> pd.DataFrame:
 
             return days_with_data, len(df_combined)
         except Exception as e:
-            print(f"Error processing phone usage for subject {subject_id}: {str(e)}")
+            print(
+                f"Error processing phone usage for subject {subject_id}: {str(e)}")
             return 0.0, 0
 
     # Get all subject IDs
-    subject_dirs = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
+    subject_dirs = [d for d in os.listdir(
+        base_path) if os.path.isdir(os.path.join(base_path, d))]
 
     results = []
     for subject_id in tqdm(subject_dirs, desc="Processing subjects"):
         watch_completeness = get_watch_data_completeness(subject_id)
         if watch_completeness == 100.0:
-            phone_ema_rate, watch_ema_rate, total_emas = get_ema_completeness(subject_id)
+            phone_ema_rate, watch_ema_rate, total_emas = get_ema_completeness(
+                subject_id)
             days_with_usage, usage_events = get_phone_usage_data(subject_id)
 
             results.append({
@@ -128,11 +138,7 @@ def analyze_data_quality(base_path: str) -> pd.DataFrame:
                 'days_with_phone_data': days_with_usage,
                 'phone_usage_events': usage_events,
                 # Composite score (you can adjust weights as needed)
-                'data_quality_score': (
-                    0.4 * watch_completeness +
-                    0.3 * phone_ema_rate +
-                    0.3 * watch_ema_rate
-                )
+                'data_quality_score': (0.4 * watch_completeness + 0.3 * phone_ema_rate + 0.3 * watch_ema_rate)
             })
 
     return pd.DataFrame(results)

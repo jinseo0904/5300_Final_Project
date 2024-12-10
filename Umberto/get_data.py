@@ -68,7 +68,7 @@ class TimeStudyProcessor:
         """Process datetime string by removing timezone abbreviation and standardizing format"""
         if pd.isna(time_str):  # Handle NaN/None values
             return pd.NaT
-        
+
         try:
             # First try the standard format "YYYY-MM-DD HH:MM:SS"
             parts = time_str.split(' ', 1)
@@ -76,7 +76,7 @@ class TimeStudyProcessor:
                 date, time_parts = parts
                 time = time_parts.split()[0]  # Take just the time portion
                 return pd.to_datetime(f"{date} {time}")
-                
+
             # Handle format like "Wed Jun 23 06:46:02 EDT 2021"
             parts = time_str.split()
             if len(parts) >= 6:
@@ -86,7 +86,7 @@ class TimeStudyProcessor:
                 time = parts[3]
                 year = parts[5]
                 return pd.to_datetime(f"{year}-{month}-{day} {time}")
-                
+
             return pd.NaT
 
         except Exception:
@@ -240,8 +240,7 @@ class TimeStudyProcessor:
 
         # Filter for completed responses and exclude Trivia
         df = df[
-            (df['Answer_Status'].isin(['Completed', 'CompletedThenDismissed'])) &
-            (df['Prompt_Type'] != 'Trivia_EMA_Micro')
+            (df['Answer_Status'].isin(['Completed', 'CompletedThenDismissed'])) & (df['Prompt_Type'] != 'Trivia_EMA_Micro')
         ].copy()
 
         if df.empty:
@@ -344,7 +343,7 @@ class TimeStudyProcessor:
 
 def main():
     subjects_file = Path("Umberto/top_10_subjects.csv")
-    data_root = Path("/media/umberto/T7/intermediate_file")
+    data_root = Path("/Volumes/T7/intermediate_file")
 
     processor = TimeStudyProcessor(subjects_file, data_root)
     processor.process_all_subjects()
