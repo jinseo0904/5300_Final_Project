@@ -33,15 +33,18 @@ def merge_and_save_csvfile(file):
     merged.to_csv(f'/Users/jinseokim/Downloads/NEU/HINF 5300/Final_Project/5300_Final_Project/Jinseo/merged_for_training/{sub_id}_merged.csv') 
     print(f"Saved {sub_id}_merged.csv")
 
-def train_and_evaluate_models(merged_csv_path):
+def train_and_evaluate_models(merged_csv_path, summary_df):
     # load merged csv
     df = pd.read_csv(merged_csv_path)
     sub_id = df.Participant_ID[0]
 
     # set the independent variables
     X = df[df.columns[3:25]]
+    #X = X.drop(columns=['Q7_STRESS'])
+    # y = df['Q7_STRESS'] 
     # set the dependent variable
     y = df['mood_score']
+    # drop 'Q7_STRESS' column from STRESS
     y = y.astype(int)
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, shuffle=False)
@@ -55,7 +58,11 @@ def train_and_evaluate_models(merged_csv_path):
     y_pred = model.predict(X_test_scaled)
 
     print("test1")
-    evaluate_and_print_metrics(y_test, y_pred, sub_id)
+    r2, mae = evaluate_and_print_metrics(y_test, y_pred, sub_id)
+    
+    # add row to summary_df
+    summary_df = summary_df.append({'Participant_ID': sub_id, 'Model_Type': 'All_Features',
+                                     'R2_mood': r2, 'MAE_mood': mae}, ignore_index=True)
 
     # Now, train the model without watch ema features
     # set X2 to columns from index 3 to the location of 'Q1_SAD' col
@@ -71,11 +78,14 @@ def train_and_evaluate_models(merged_csv_path):
     y_pred = model.predict(X_test_scaled)
 
     print("test2")
-    evaluate_and_print_metrics(y_test, y_pred, sub_id)
+    r2, mae = evaluate_and_print_metrics(y_test, y_pred, sub_id)
+    summary_df = summary_df.append({'Participant_ID': sub_id, 'Model_Type': 'No_Watch_EMAs',
+                                     'R2_mood': r2, 'MAE_mood': mae}, ignore_index=True)
 
     print("test3")
     # set X3 to columns from index of 'Q1_SAD' to index 25
     X3 = df[df.columns[df.columns.get_loc('Q1_SAD'):25]]
+    #X3 = X3.drop(columns=['Q7_STRESS'])
     #print(X3.columns)
     X_train, X_test, y_train, y_test = train_test_split(X3, y, test_size=0.3, random_state=42, shuffle=False)
     scaler = MinMaxScaler()
@@ -86,7 +96,9 @@ def train_and_evaluate_models(merged_csv_path):
 
     X_test_scaled = scaler.transform(X_test)
     y_pred = model.predict(X_test_scaled)
-    evaluate_and_print_metrics(y_test, y_pred, sub_id)
+    r2, mae = evaluate_and_print_metrics(y_test, y_pred, sub_id)
+    summary_df = summary_df.append({'Participant_ID': sub_id, 'Model_Type': 'Watch_EMAs_Only',
+                                     'R2_mood': r2, 'MAE_mood': mae}, ignore_index=True)
     pass
 
 def evaluate_and_print_metrics(y_test, y_pred, sub_id):
@@ -97,11 +109,16 @@ def evaluate_and_print_metrics(y_test, y_pred, sub_id):
     print(f"R2: {r2:.2f}")
     print(f"Mean Absolute Error: {mae:.2f}")
     print("=" * 50 + "\n\n")
+    return r2, mae
 
 watch_metrics_path = '/Users/jinseokim/Downloads/NEU/HINF 5300/Final_Project/5300_Final_Project/Umberto/data'
+# create an empty dataframe to combine the ML performance summary
+summary_df = pd.DataFrame(columns=['Participant_ID', 'Model_Type', 'R2_mood', 'MAE_mood', 'R2_stress', 'MAE_stress'])
+
 for file in mood_scores_files:
     df = pd.read_csv(os.path.join(mood_scores_path, file))
     sub_id = df.Participant_ID[0]
+    print(sub_id)
 
     merge_and_save_csvfile(file)
 
@@ -109,5 +126,8 @@ for file in mood_scores_files:
     if f"{sub_id}_merged.csv" in os.listdir('/Users/jinseokim/Downloads/NEU/HINF 5300/Final_Project/5300_Final_Project/Jinseo/merged_for_training'):
         # train models
         merged_path = os.path.join(merged_folder_path, f"{sub_id}_merged.csv")
-        train_and_evaluate_models(merged_path)
+        train_and_evaluate_models(merged_path, summary_df)
+
+    # save summary dataframe
+    summary_df.to_csv('/Users/jinseokim/Downloads/NEU/HINF 5300/Final_Project/5300_Final_Project/Jinseo/summary_df.csv', index=False)
     
