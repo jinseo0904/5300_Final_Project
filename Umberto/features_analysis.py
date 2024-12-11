@@ -38,7 +38,6 @@ def load_and_preprocess_data(df):
 
     # Phone stress normalization
     stress_mean = df.groupby('id')['Q7_STRESS'].transform('mean')
-    # Fix the chained assignment warning
     df.loc[:, 'Q7_STRESS'] = df['Q7_STRESS'].fillna(stress_mean)
     df.loc[:, 'stress_normalized'] = df.groupby(
         'id')['Q7_STRESS'].transform(lambda x: (x - x.mean()) / x.std())
@@ -60,7 +59,8 @@ def analyze_stress_by_subject(df):
     Analyze stress statistics for each subject
     """
     stress_measures = [
-        'Q7_STRESS', 'stress_2'] if 'stress_2' in df.columns else ['Q7_STRESS']
+        'Q7_STRESS',
+        'stress_2'] if 'stress_2' in df.columns else ['Q7_STRESS']
 
     subject_stats = df.groupby('id').agg({
         **{measure: ['mean', 'std', 'count'] for measure in stress_measures},
@@ -70,62 +70,50 @@ def analyze_stress_by_subject(df):
     return subject_stats
 
 
-def analyze_feature_correlations(df):
+def analyze_all_features_with_stress(df):
     """
-    Analyze correlations with normalized stress scores
+    Comprehensive analysis of all features' relationships with stress
     """
-    # Phone EMA features
-    phone_features = [
-        'stress_normalized', 'Q1_SAD', 'Q2_HAPP', 'Q3_FATIG', 'Q4_EN',
-        'Q5_REL', 'Q6_TEN', 'Q7_STRESS', 'Q8_FRUST', 'Q9_NERV'
+    # All features to analyze (excluding metadata columns, stress measures,
+    # and derived columns)
+    exclude_cols = [
+        'id', 'date',  # Metadata
+        # Stress measures and derived
+        'Q7_STRESS', 'stress_2', 'stress_normalized', 'watch_stress_normalized', 'stress_high',
+        'day_of_week', 'month', 'is_weekend'  # Temporal columns
     ]
+    features = [col for col in df.columns if col not in exclude_cols]
 
-    # Watch EMA features
-    watch_features = [
-        'excite_14', 'focus_3', 'frust_12', 'happy_8', 'int_exer_3',
-        'nervous_4', 'proc_4', 'relax_10', 'sad_7', 'stress_2', 'tense_11'
-    ]
+    # Calculate correlations with stress for all features
+    correlations = {}
+    feature_stats = {}
 
-    # Behavioral/sensor features
-    behavioral_features = [
-        'SLEEP_MINUTES', 'SCREEN_ON_SECONDS', 'UNLOCK_EVENTS_NUM',
-        'MIMS_SUM_WEAR', 'USAGE_DURATION_MIN',
-        'IN_VEHICLE', 'ON_BIKE', 'ON_FOOT', 'RUNNING', 'STILL', 'TILTING',
-        'WALKING', 'UNKNOWN'
-    ]
+    for feature in features:
+        # Check if feature is numeric
+        if pd.api.types.is_numeric_dtype(df[feature]):
+            if df[feature].nunique() > 1:  # Skip constant features
+                # Calculate correlation
+                correlation = df[feature].corr(df['stress_normalized'])
+                correlations[feature] = correlation
 
-    # Combine all features
-    all_features = phone_features + watch_features + behavioral_features
+                # Calculate basic statistics
+                feature_stats[feature] = {
+                    'correlation': correlation,
+                    'mean_high_stress': df[df['stress_high']][feature].mean(),
+                    'mean_low_stress': df[~df['stress_high']][feature].mean(),
+                    'std_high_stress': df[df['stress_high']][feature].std(),
+                    'std_low_stress': df[~df['stress_high']][feature].std(),
+                    'effect_size': (df[df['stress_high']][feature].mean() -
+                                    df[~df['stress_high']][feature].mean()) / df[feature].std()
+                }
 
-    # Get available features that exist in the dataframe
-    available_features = [f for f in all_features if f in df.columns]
+    # Create sorted correlation series
+    correlation_series = pd.Series(correlations).sort_values(ascending=False)
 
-    # Remove features with constant values (all zeros or all same value)
-    non_constant_features = []
-    constant_features = []
-    for feature in available_features:
-        if df[feature].nunique() > 1:
-            non_constant_features.append(feature)
-        else:
-            constant_features.append(feature)
+    # Convert feature stats to DataFrame
+    stats_df = pd.DataFrame(feature_stats).T
 
-    if constant_features:
-        print("\nFeatures with constant values (excluded from correlation analysis):")
-        for feature in constant_features:
-            print(f"- {feature}: all values = {df[feature].iloc[0]}")
-
-    # Calculate correlations only for non-constant features
-    corr_matrix = df[non_constant_features].corr(
-    )['stress_normalized'].sort_values(ascending=False)
-
-    # Group correlations by feature type
-    grouped_correlations = {
-        'Phone EMA': corr_matrix[corr_matrix.index.isin(phone_features)],
-        'Watch EMA': corr_matrix[corr_matrix.index.isin(watch_features)],
-        'Behavioral': corr_matrix[corr_matrix.index.isin(behavioral_features)]
-    }
-
-    return corr_matrix, grouped_correlations
+    return correlation_series, stats_df
 
 
 def plot_normalized_distributions(df):
@@ -141,89 +129,102 @@ def plot_normalized_distributions(df):
     # Plot phone stress scores
     sns.boxplot(x='id', y='Q7_STRESS', data=df, ax=axes[0])
     axes[0].set_title('Original Phone Stress Scores by Subject')
-    # Fix ticklabels warning
-    ticks = axes[0].get_xticks()
-    axes[0].set_xticks(ticks)
     axes[0].set_xticklabels(axes[0].get_xticklabels(), rotation=45, ha='right')
 
     # Plot normalized phone stress
     sns.boxplot(x='id', y='stress_normalized', data=df, ax=axes[1])
     axes[1].set_title('Normalized Phone Stress Scores by Subject')
-    # Fix ticklabels warning
-    ticks = axes[1].get_xticks()
-    axes[1].set_xticks(ticks)
     axes[1].set_xticklabels(axes[1].get_xticklabels(), rotation=45, ha='right')
 
     # Plot watch stress if available
     if 'watch_stress_normalized' in df.columns:
         sns.boxplot(x='id', y='watch_stress_normalized', data=df, ax=axes[2])
         axes[2].set_title('Normalized Watch Stress Scores by Subject')
-        # Fix ticklabels warning
-        ticks = axes[2].get_xticks()
-        axes[2].set_xticks(ticks)
         axes[2].set_xticklabels(
-            axes[2].get_xticklabels(), rotation=45, ha='right')
+            axes[2].get_xticklabels(),
+            rotation=45,
+            ha='right')
 
     plt.tight_layout()
     return fig
 
 
-def plot_correlation_heatmaps(df, output_dir):
+def plot_comprehensive_correlations(df, correlation_series, output_dir):
     """
-    Create separate heatmaps for each feature group
+    Create comprehensive correlation visualizations
     """
-    # Define feature groups
-    phone_features = [
-        'Q1_SAD', 'Q2_HAPP', 'Q3_FATIG', 'Q4_EN',
-        'Q5_REL', 'Q6_TEN', 'Q7_STRESS', 'Q8_FRUST', 'Q9_NERV'
-    ]
+    # 1. Overall correlation plot
+    plt.figure(figsize=(15, 8))
+    correlation_series.plot(kind='bar')
+    plt.title('Correlation of Features with Normalized Stress')
+    plt.xlabel('Features')
+    plt.ylabel('Correlation Coefficient')
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.savefig(output_dir / 'all_features_correlation.png')
+    plt.close()
 
-    watch_features = [
-        'excite_14', 'focus_3', 'frust_12', 'happy_8', 'int_exer_3',
-        'nervous_4', 'proc_4', 'relax_10', 'sad_7', 'stress_2', 'tense_11'
-    ]
+    # 2. Top 10 positive and negative correlations
+    plt.figure(figsize=(12, 6))
+    top_correlations = pd.concat([
+        correlation_series.head(10),
+        correlation_series.tail(10)
+    ])
+    top_correlations.plot(kind='bar')
+    plt.title('Top 10 Positive and Negative Correlations with Normalized Stress')
+    plt.xlabel('Features')
+    plt.ylabel('Correlation Coefficient')
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.savefig(output_dir / 'top_correlations.png')
+    plt.close()
 
-    behavioral_features = [
-        'SLEEP_MINUTES', 'SCREEN_ON_SECONDS', 'UNLOCK_EVENTS_NUM',
-        'MIMS_SUM_WEAR', 'USAGE_DURATION_MIN',
-        'IN_VEHICLE', 'ON_BIKE', 'ON_FOOT', 'RUNNING', 'STILL', 'TILTING',
-        'WALKING', 'UNKNOWN'
-    ]
+    # 3. Complete correlation heatmap including stress measures
+    # Select numeric columns only
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    # Exclude derived columns and metadata
+    exclude_cols = ['stress_high', 'date']
+    cols_for_heatmap = [col for col in numeric_cols if col not in exclude_cols]
 
-    feature_groups = {
-        'phone_ema': phone_features,
-        'watch_ema': watch_features,
-        'behavioral': behavioral_features
-    }
+    # Calculate correlation matrix
+    corr_matrix = df[cols_for_heatmap].corr()
 
-    for group_name, features in feature_groups.items():
-        # Get available features and remove constant features
-        available_features = []
-        constant_features = []
+    # Create heatmap
+    plt.figure(figsize=(20, 16))
+    mask = np.triu(np.ones_like(corr_matrix), k=0)
+    sns.heatmap(corr_matrix,
+                mask=mask,
+                cmap='coolwarm',
+                center=0,
+                annot=True,
+                fmt='.2f',
+                square=True,
+                cbar_kws={'label': 'Correlation Coefficient'})
 
-        for feature in features:
-            if feature in df.columns:
-                if df[feature].nunique() > 1:
-                    available_features.append(feature)
-                else:
-                    constant_features.append(feature)
+    plt.title('Complete Correlation Heatmap')
+    plt.tight_layout()
+    plt.savefig(output_dir / 'complete_correlation_heatmap.png')
+    plt.close()
 
-        if available_features:
-            plt.figure(figsize=(12, 10))
-            sns.heatmap(df[available_features].corr(),
-                        annot=True,
-                        cmap='coolwarm',
-                        center=0,
-                        fmt='.2f')
 
-            title = f'{group_name.replace("_", " ").title()} Feature Correlations'
-            if constant_features:
-                title += f'\n(Excluded constant features: {", ".join(constant_features)})'
-            plt.title(title)
+def plot_feature_distributions(df, stats_df, output_dir):
+    """
+    Create distribution plots for top correlated features
+    """
+    # Get top 10 features by absolute correlation
+    top_features = stats_df.nlargest(10, 'correlation').index
 
-            plt.tight_layout()
-            plt.savefig(output_dir / f'correlation_heatmap_{group_name}.png')
-            plt.close()
+    for feature in top_features:
+        plt.figure(figsize=(10, 6))
+        sns.kdeplot(data=df[df['stress_high']], x=feature, label='High Stress')
+        sns.kdeplot(data=df[~df['stress_high']], x=feature, label='Low Stress')
+        plt.title(f'{feature} Distribution by Stress Level')
+        plt.xlabel(feature)
+        plt.ylabel('Density')
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(output_dir / f'{feature}_distribution.png')
+        plt.close()
 
 
 def plot_stress_time_series_by_subject(df):
@@ -287,103 +288,37 @@ def analyze_temporal_patterns(df):
     return patterns
 
 
-def identify_stress_predictors(df):
+def create_feature_relationship_report(correlation_series, stats_df):
     """
-    Identify potential predictors of high stress including watch features
+    Create a detailed report of feature relationships with stress
     """
-    # Define lag features including watch EMA
-    phone_lag_features = ['Q7_STRESS', 'Q2_HAPP', 'Q5_REL']
-    watch_lag_features = ['happy_8', 'relax_10', 'stress_2']
-    sensor_features = ['SLEEP_MINUTES', 'SCREEN_ON_SECONDS',
-                       'UNLOCK_EVENTS_NUM', 'MIMS_SUM_WEAR']
+    report = []
 
-    lag_features = phone_lag_features + watch_lag_features + sensor_features
+    # Overall summary
+    report.append("Feature Relationship Analysis Report")
+    report.append("=" * 40)
 
-    # Create lagged features
-    for feature in lag_features:
-        if feature in df.columns:
-            df[f'prev_day_{feature}'] = df.groupby('id')[feature].shift(1)
-            df[f'roll_3day_{feature}'] = df.groupby('id')[feature].rolling(
-                window=3, min_periods=1).mean().reset_index(0, drop=True)
-            df[f'roll_7day_{feature}'] = df.groupby('id')[feature].rolling(
-                window=7, min_periods=1).mean().reset_index(0, drop=True)
+    # Top positive correlations
+    report.append("\nTop 5 Positive Correlations with Stress:")
+    for feature in correlation_series.head().index:
+        stats = stats_df.loc[feature]
+        report.append(f"\n{feature}:")
+        report.append(f"- Correlation: {stats['correlation']:.3f}")
+        report.append(f"- Mean (High Stress): {stats['mean_high_stress']:.3f}")
+        report.append(f"- Mean (Low Stress): {stats['mean_low_stress']:.3f}")
+        report.append(f"- Effect Size: {stats['effect_size']:.3f}")
 
-    # Add activity features
-    activity_cols = ['IN_VEHICLE', 'ON_BIKE', 'ON_FOOT',
-                     'RUNNING', 'STILL', 'TILTING', 'WALKING']
-    if all(col in df.columns for col in activity_cols):
-        df['total_activity'] = df[activity_cols].sum(axis=1)
-        df['prev_day_activity'] = df.groupby('id')['total_activity'].shift(1)
-        df['roll_3day_activity'] = df.groupby('id')['total_activity'].rolling(
-            window=3, min_periods=1).mean().reset_index(0, drop=True)
+    # Top negative correlations
+    report.append("\nTop 5 Negative Correlations with Stress:")
+    for feature in correlation_series.tail().index:
+        stats = stats_df.loc[feature]
+        report.append(f"\n{feature}:")
+        report.append(f"- Correlation: {stats['correlation']:.3f}")
+        report.append(f"- Mean (High Stress): {stats['mean_high_stress']:.3f}")
+        report.append(f"- Mean (Low Stress): {stats['mean_low_stress']:.3f}")
+        report.append(f"- Effect Size: {stats['effect_size']:.3f}")
 
-    df['is_weekend'] = df['date'].dt.dayofweek.isin([5, 6]).astype(int)
-
-    # Group predictors
-    predictor_groups = {
-        'Previous Day EMA': [col for col in df.columns if 'prev_day_' in col and any(f in col for f in phone_lag_features + watch_lag_features)],
-        'Rolling Average EMA': [col for col in df.columns if 'roll_' in col and any(f in col for f in phone_lag_features + watch_lag_features)],
-        'Previous Day Sensors': [col for col in df.columns if 'prev_day_' in col and any(f in col for f in sensor_features)],
-        'Rolling Average Sensors': [col for col in df.columns if 'roll_' in col and any(f in col for f in sensor_features)],
-        'Activity': [col for col in df.columns if 'activity' in col],
-        'Time Features': ['is_weekend']
-    }
-
-    # Calculate correlations for each group
-    grouped_correlations = {}
-    for group_name, group_cols in predictor_groups.items():
-        available_cols = [col for col in group_cols if col in df.columns]
-        if available_cols:
-            correlations = df[available_cols + ['stress_normalized']
-                              ].corr()['stress_normalized'][:-1]
-            grouped_correlations[group_name] = correlations.sort_values(
-                ascending=False)
-
-    feature_importance = pd.concat(
-        [corrs for corrs in grouped_correlations.values()])
-    feature_importance = feature_importance.abs().sort_values(ascending=False)
-
-    results = {
-        'grouped_correlations': grouped_correlations,
-        'feature_importance': feature_importance,
-        'top_predictors': feature_importance.head(10)
-    }
-
-    return results, df
-
-
-def plot_predictor_importance(results):
-    """
-    Plot the importance of different predictors
-    """
-    plt.figure(figsize=(12, 6))
-    top_predictors = results['top_predictors']
-    sns.barplot(x=top_predictors.values, y=top_predictors.index)
-    plt.title('Top 10 Stress Predictors (Absolute Correlation)')
-    plt.xlabel('|Correlation|')
-    plt.tight_layout()
-
-    return plt
-
-
-def analyze_predictor_relationships(df, top_predictors):
-    """
-    Create detailed analysis of top predictor relationships
-    """
-    relationships = {}
-
-    for predictor in top_predictors.index[:5]:
-        if predictor in df.columns:
-            stats = {
-                'correlation': df[predictor].corr(df['stress_normalized']),
-                'mean_high_stress': df[df['stress_high']][predictor].mean(),
-                'mean_low_stress': df[~df['stress_high']][predictor].mean(),
-                'std_high_stress': df[df['stress_high']][predictor].std(),
-                'std_low_stress': df[~df['stress_high']][predictor].std()
-            }
-            relationships[predictor] = stats
-
-    return relationships
+    return "\n".join(report)
 
 
 def main():
@@ -415,53 +350,32 @@ def main():
         for pattern_name, pattern_data in patterns.items():
             print(f"\n{pattern_name}:")
             print(pattern_data)
-            pattern_data.to_frame().to_csv(
-                output_dir / f'temporal_pattern_{measure}_{pattern_name}.csv')
+            pattern_data.to_frame().to_csv(output_dir /
+                                           f'temporal_pattern_{measure}_{pattern_name}.csv')
 
     plot_stress_time_series_by_subject(processed_df)
     plt.savefig(output_dir / 'stress_time_series.png')
     plt.close()
 
-    print("\n3. Analyzing feature correlations...")
-    corr_matrix, grouped_correlations = analyze_feature_correlations(
+    print("\n3. Analyzing feature relationships...")
+    correlation_series, stats_df = analyze_all_features_with_stress(
         processed_df)
-    print("\nFeature Correlations with Stress by Group:")
-    for group, correlations in grouped_correlations.items():
-        print(f"\n{group}:")
-        print(correlations)
 
-    pd.DataFrame(grouped_correlations).to_csv(
-        output_dir / 'feature_correlations_by_group.csv')
+    # Save correlation results
+    correlation_series.to_csv(output_dir / 'all_feature_correlations.csv')
+    stats_df.to_csv(output_dir / 'feature_statistics.csv')
 
-    plot_correlation_heatmaps(processed_df, output_dir)
+    # Create visualizations
+    plot_comprehensive_correlations(
+        processed_df, correlation_series, output_dir)
+    plot_feature_distributions(processed_df, stats_df, output_dir)
 
-    print("\n4. Analyzing predictive relationships...")
-    predictor_results, processed_df = identify_stress_predictors(processed_df)
-    print("\nTop Predictors:")
-    print(predictor_results['top_predictors'])
-    predictor_results['top_predictors'].to_frame().to_csv(
-        output_dir / 'top_predictors.csv')
+    # Generate and save report
+    report = create_feature_relationship_report(correlation_series, stats_df)
+    with open(output_dir / 'feature_analysis_report.txt', 'w') as f:
+        f.write(report)
 
-    plot_predictor_importance(predictor_results)
-    plt.savefig(output_dir / 'predictor_importance.png')
-    plt.close()
-
-    relationships = analyze_predictor_relationships(
-        processed_df, predictor_results['top_predictors'])
-    print("\nPredictor Relationships:")
-    print(relationships)
-    pd.DataFrame(relationships).to_csv(
-        output_dir / 'predictor_relationships.csv')
-
-    print("\n5. Analyzing activity patterns...")
-    if 'total_activity' in processed_df.columns:
-        plt.figure(figsize=(10, 6))
-        sns.scatterplot(data=processed_df, x='total_activity',
-                        y='stress_normalized', hue='id')
-        plt.title('Activity Level vs Normalized Stress')
-        plt.savefig(output_dir / 'activity_vs_stress.png')
-        plt.close()
-
+    print("\n4. Analyzing daily patterns...")
     plt.figure(figsize=(10, 6))
     sns.boxplot(data=processed_df, x='day_of_week', y='stress_normalized')
     plt.title('Stress Levels by Day of Week')
@@ -472,8 +386,11 @@ def main():
 
     if 'SLEEP_MINUTES' in processed_df.columns:
         plt.figure(figsize=(10, 6))
-        sns.scatterplot(data=processed_df, x='SLEEP_MINUTES',
-                        y='stress_normalized', hue='id')
+        sns.scatterplot(
+            data=processed_df,
+            x='SLEEP_MINUTES',
+            y='stress_normalized',
+            hue='id')
         plt.title('Sleep Duration vs Normalized Stress')
         plt.savefig(output_dir / 'sleep_vs_stress.png')
         plt.close()
@@ -483,8 +400,11 @@ def main():
     for feature in watch_specific_features:
         if feature in processed_df.columns:
             plt.figure(figsize=(10, 6))
-            sns.scatterplot(data=processed_df, x=feature,
-                            y='stress_normalized', hue='id')
+            sns.scatterplot(
+                data=processed_df,
+                x=feature,
+                y='stress_normalized',
+                hue='id')
             plt.title(f'{feature} vs Normalized Stress')
             plt.savefig(output_dir / f'{feature.lower()}_vs_stress.png')
             plt.close()
@@ -492,8 +412,8 @@ def main():
     print(
         f"\nAnalysis complete! Visualizations have been saved to {output_dir}/")
 
-    return processed_df, subject_stats, grouped_correlations, temporal_patterns, predictor_results, relationships
+    return processed_df, subject_stats, correlation_series, stats_df, temporal_patterns, report
 
 
 if __name__ == "__main__":
-    processed_df, subject_stats, grouped_correlations, temporal_patterns, predictor_results, relationships = main()
+    processed_df, subject_stats, correlation_series, stats_df, temporal_patterns, report = main()
