@@ -65,11 +65,32 @@ class TimeStudyProcessor:
         }
 
     def _process_datetime(self, time_str: str) -> pd.Timestamp:
-        """Process datetime string by removing timezone abbreviation"""
-        # Remove all possible US timezone abbreviations
-        for tz in ['EDT', 'EST', 'CDT', 'CST', 'MDT', 'MST', 'PDT', 'PST', 'HST', 'AKST', 'AKDT', 'MSK']:
-            time_str = time_str.replace(tz, '')
-        return pd.to_datetime(time_str.strip())
+        """Process datetime string by removing timezone abbreviation and standardizing format"""
+        if pd.isna(time_str):  # Handle NaN/None values
+            return pd.NaT
+
+        try:
+            # First try the standard format "YYYY-MM-DD HH:MM:SS"
+            parts = time_str.split(' ', 1)
+            if len(parts) == 2 and parts[0].count('-') == 2:
+                date, time_parts = parts
+                time = time_parts.split()[0]  # Take just the time portion
+                return pd.to_datetime(f"{date} {time}")
+
+            # Handle format like "Wed Jun 23 06:46:02 EDT 2021"
+            parts = time_str.split()
+            if len(parts) >= 6:
+                # Extract relevant parts and rearrange
+                month = parts[1]
+                day = parts[2]
+                time = parts[3]
+                year = parts[5]
+                return pd.to_datetime(f"{year}-{month}-{day} {time}")
+
+            return pd.NaT
+
+        except Exception:
+            return pd.NaT
 
     def _create_date_column(self, df: pd.DataFrame) -> pd.DataFrame:
         """Create consistent date column from YEAR, MONTH, DAY columns"""
@@ -219,44 +240,39 @@ class TimeStudyProcessor:
 
         # Filter for completed responses and exclude Trivia
         df = df[
-            (df['Answer_Status'] == 'Completed') &
-            (df['Prompt_Type'] != 'Trivia_EMA_Micro')
+            (df['Answer_Status'].isin(['Completed', 'CompletedThenDismissed'])) & (df['Prompt_Type'] != 'Trivia_EMA_Micro')
         ].copy()
 
         if df.empty:
             return pd.DataFrame()
 
-        # Get answer if Question_X_ID matches our interests
-        if df['Question_X_ID'].isin(WATCH_QUESTIONS_OF_INTEREST).any():
-            # Create date from Unix timestamp
-            df['date'] = pd.to_datetime(df['Question_X_Answer_Unixtime'], unit='ms').dt.date
+        # Create date from timestamp
+        df['date'] = df['Initial_Prompt_Local_Time'].apply(self._process_datetime).dt.date
 
-            # Map answers to numeric values
-            df['answer_value'] = df['Question_X_Answer_Text '].str.lower().map(RESPONSE_MAP_WATCH)
+        # Only keep rows where Question_X_ID is in our set of interest
+        df = df[df['Question_X_ID'].isin(WATCH_QUESTIONS_OF_INTEREST)].copy()
 
-            # Drop rows where mapping failed
-            df = df.dropna(subset=['answer_value'])
+        if df.empty:
+            return pd.DataFrame()
 
-            # Create DataFrame with date and answer
-            responses_df = df[['date', 'Question_X_ID', 'answer_value']].copy()
+        # Map answers to numeric values
+        df['answer_value'] = df['Question_X_Answer_Text'].str.lower().map(RESPONSE_MAP_WATCH)
 
-            # Pivot to get one column per question type
-            daily_ema = responses_df.pivot_table(
-                index='date',
-                columns='Question_X_ID',
-                values='answer_value',
-                aggfunc='mean'
-            ).reset_index()
+        # Drop rows where mapping failed
+        df = df.dropna(subset=['answer_value'])
 
-            # Rename columns
-            daily_ema.columns = [
-                'date' if col == 'date' else f'{col}'
-                for col in daily_ema.columns
-            ]
+        if df.empty:
+            return pd.DataFrame()
 
-            return daily_ema
+        # Pivot to get one column per question type
+        daily_ema = df.pivot_table(
+            index='date',
+            columns='Question_X_ID',
+            values='answer_value',
+            aggfunc='mean'
+        ).reset_index()
 
-        return pd.DataFrame()
+        return daily_ema
 
     def _read_csv_safe(self, path: Path) -> pd.DataFrame:
         """Safely read CSV file, return empty DataFrame if file doesn't exist"""
@@ -327,7 +343,7 @@ class TimeStudyProcessor:
 
 def main():
     subjects_file = Path("Umberto/top_10_subjects.csv")
-    data_root = Path("/media/umberto/T7/intermediate_file")
+    data_root = Path("/Volumes/T7/intermediate_file")
 
     processor = TimeStudyProcessor(subjects_file, data_root)
     processor.process_all_subjects()

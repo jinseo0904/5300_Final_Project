@@ -20,7 +20,7 @@ for date in os.listdir(sub_path):
         file_counts += 1
         # Read each CSV file
         daily_data = pd.read_csv(os.path.join(sub_path, phone_path))
-        
+
         # Append to the master DataFrame
         all_data = pd.concat([all_data, daily_data], ignore_index=True)
 
