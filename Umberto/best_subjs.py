@@ -3,6 +3,7 @@ import os
 from glob import glob
 from typing import Tuple
 from tqdm import tqdm
+import numpy as np
 
 
 def analyze_data_quality(base_path: str) -> pd.DataFrame:
@@ -44,7 +45,7 @@ def analyze_data_quality(base_path: str) -> pd.DataFrame:
                 f"Error processing watch data for subject {subject_id}: {str(e)}")
             return 0.0
 
-    def get_ema_completeness(subject_id: str) -> Tuple[float, float, int]:
+    def get_ema_completeness(subject_id: str) -> Tuple[float, float, int, float, float]:
         """
         Analyzes EMA response rates for both phone and watch
         """
@@ -63,8 +64,13 @@ def analyze_data_quality(base_path: str) -> pd.DataFrame:
                     phone_df[phone_df['Answer_Status'] == 'Completed'])
                 phone_total = len(phone_df)
                 phone_rate = (phone_complete / phone_total * 100) if phone_total > 0 else 0.0
+
+                # Calculate daily response variability
+                daily_counts = phone_df[phone_df['Answer_Status'] == 'Completed'].groupby('Initial_Prompt_Date').size()
+                phone_response_std = daily_counts.std() if not daily_counts.empty else 0.0
+
             else:
-                phone_rate, phone_total = 0.0, 0
+                phone_rate, phone_total, phone_response_std = 0.0, 0, 0.0
 
             # Watch EMAs (μEMA)
             watch_files = glob(os.path.join(
@@ -80,13 +86,17 @@ def analyze_data_quality(base_path: str) -> pd.DataFrame:
                     ['Completed', 'CompletedThenDismissed'])])
                 watch_total = len(watch_df)
                 watch_rate = (watch_complete / watch_total * 100) if watch_total > 0 else 0.0
-            else:
-                watch_rate, watch_total = 0.0, 0
 
-            return phone_rate, watch_rate, phone_total + watch_total
+                daily_counts = watch_df[watch_df['Answer_Status'].isin(['Completed', 'CompletedThenDismissed'])].groupby('Initial_Prompt_Date').size()
+                watch_response_std = daily_counts.std() if not daily_counts.empty else 0.0
+
+            else:
+                watch_rate, watch_total, watch_response_std = 0.0, 0, 0.0
+        
+            return phone_rate, watch_rate, phone_total + watch_total, phone_response_std, watch_response_std
         except Exception as e:
             print(f"Error processing EMAs for subject {subject_id}: {str(e)}")
-            return 0.0, 0.0, 0
+            return 0.0, 0.0, 0, 0.0, 0.0
 
     def get_phone_usage_data(subject_id: str) -> Tuple[float, int]:
         """
@@ -125,9 +135,14 @@ def analyze_data_quality(base_path: str) -> pd.DataFrame:
     for subject_id in tqdm(subject_dirs, desc="Processing subjects"):
         watch_completeness = get_watch_data_completeness(subject_id)
         if watch_completeness == 100.0:
-            phone_ema_rate, watch_ema_rate, total_emas = get_ema_completeness(
+            phone_ema_rate, watch_ema_rate, total_emas, phone_var, watch_var = get_ema_completeness(
                 subject_id)
             days_with_usage, usage_events = get_phone_usage_data(subject_id)
+
+            variability_score = np.mean([
+                phone_var / max(phone_ema_rate, 1),
+                watch_var / max(watch_ema_rate, 1)
+            ])
 
             results.append({
                 'subject_id': subject_id,
@@ -137,6 +152,7 @@ def analyze_data_quality(base_path: str) -> pd.DataFrame:
                 'total_emas': total_emas,
                 'days_with_phone_data': days_with_usage,
                 'phone_usage_events': usage_events,
+                'variability_score': variability_score,
                 # Composite score (you can adjust weights as needed)
                 'data_quality_score': (0.4 * watch_completeness + 0.3 * phone_ema_rate + 0.3 * watch_ema_rate)
             })
@@ -154,7 +170,7 @@ def get_top_subjects(df: pd.DataFrame, n: int = 10) -> pd.DataFrame:
 # Usage example:
 if __name__ == "__main__":
     # Replace with your actual data path
-    DATA_PATH = "/media/umberto/T7/intermediate_file"
+    DATA_PATH = "/Volumes/T7/intermediate_file"
 
     # Analyze all subjects
     quality_df = analyze_data_quality(DATA_PATH)

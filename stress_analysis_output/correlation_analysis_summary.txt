@@ -1,0 +1,160 @@
+Correlation Analysis Summary
+========================================
+
+Within-Subject Correlation Summary:
+
+Subject smeltingexerciserstabilize:
+Top 5 positive correlations:
+  Q6_TEN: 0.410
+  Q3_FATIG: 0.408
+  Q1_SAD: 0.405
+  Q8_FRUST: 0.360
+  frust_12: 0.248
+Top 5 negative correlations:
+  proc_4: -0.221
+  Q2_HAPP: -0.222
+  USAGE_DURATION_MIN: -0.251
+  happy_8: -0.256
+  Q4_EN: -0.288
+
+Subject dissuadecelestialrelic:
+Top 5 positive correlations:
+  Q6_TEN: 0.645
+  Q1_SAD: 0.561
+  Q9_NERV: 0.556
+  Q8_FRUST: 0.494
+  tense_11: 0.486
+Top 5 negative correlations:
+  excite_14: -0.264
+  relax_10: -0.304
+  happy_8: -0.421
+  Q2_HAPP: -0.504
+  Q5_REL: -0.529
+
+Subject washboardceramicsenticing:
+Top 5 positive correlations:
+  Q8_FRUST: 0.795
+  Q6_TEN: 0.777
+  Q1_SAD: 0.726
+  Q9_NERV: 0.523
+  tense_11: 0.458
+Top 5 negative correlations:
+  focus_3: -0.218
+  happy_8: -0.309
+  Q5_REL: -0.369
+  relax_10: -0.375
+  Q2_HAPP: -0.422
+
+Subject afflictedrevenueepilepsy:
+Top 5 positive correlations:
+  Q6_TEN: 0.846
+  Q8_FRUST: 0.745
+  Q9_NERV: 0.686
+  tense_11: 0.484
+  frust_12: 0.461
+Top 5 negative correlations:
+  ON_BIKE: -0.142
+  relax_10: -0.155
+  MIMS_SUM_WEAR: -0.168
+  UNKNOWN: -0.209
+  STILL: -0.276
+
+Subject diagramuncoupleoutput:
+Top 5 positive correlations:
+  Q6_TEN: 0.571
+  Q9_NERV: 0.489
+  nervous_4: 0.404
+  Q8_FRUST: 0.264
+  tense_11: 0.261
+Top 5 negative correlations:
+  SCREEN_ON_SECONDS: -0.219
+  happy_8: -0.245
+  int_exer_3: -0.372
+  Q5_REL: -0.475
+  relax_10: -0.490
+
+Subject subtitlegrievousbazooka:
+Top 5 positive correlations:
+  Q8_FRUST: 0.451
+  Q6_TEN: 0.339
+  Q9_NERV: 0.328
+  Q1_SAD: 0.238
+  tense_11: 0.140
+Top 5 negative correlations:
+  UNLOCK_EVENTS_NUM: -0.097
+  int_exer_3: -0.127
+  Q4_EN: -0.175
+  Q2_HAPP: -0.178
+  Q5_REL: -0.200
+
+Subject anagramprobingscrooge:
+Top 5 positive correlations:
+  Q6_TEN: 0.666
+  Q9_NERV: 0.632
+  Q8_FRUST: 0.591
+  Q1_SAD: 0.504
+  nervous_4: 0.480
+Top 5 negative correlations:
+  ON_FOOT: -0.186
+  relax_10: -0.332
+  happy_8: -0.379
+  Q2_HAPP: -0.394
+  Q5_REL: -0.510
+
+Subject spinstersubatomiccoyness:
+Top 5 positive correlations:
+  Q6_TEN: 0.414
+  Q9_NERV: 0.315
+  Q8_FRUST: 0.312
+  nervous_4: 0.242
+  Q1_SAD: 0.235
+Top 5 negative correlations:
+  Q2_HAPP: -0.281
+  excite_14: -0.294
+  happy_8: -0.330
+  relax_10: -0.358
+  Q5_REL: -0.458
+
+Subject groinunratedbattery:
+Top 5 positive correlations:
+  int_exer_3: 0.117
+  relax_10: 0.054
+  excite_14: 0.051
+  happy_8: 0.046
+  UNLOCK_EVENTS_NUM: 0.045
+Top 5 negative correlations:
+  STILL: -0.040
+  proc_4: -0.045
+  MIMS_SUM_WEAR: -0.080
+  SLEEP_MINUTES: -0.083
+  SCREEN_ON_SECONDS: -0.093
+
+Subject tipoffstarchpartly:
+Top 5 positive correlations:
+  Q6_TEN: 0.616
+  Q8_FRUST: 0.447
+  Q9_NERV: 0.344
+  Q1_SAD: 0.339
+  nervous_4: 0.267
+Top 5 negative correlations:
+  SLEEP_MINUTES: -0.175
+  UNKNOWN: -0.180
+  relax_10: -0.188
+  happy_8: -0.340
+  Q5_REL: -0.478
+
+Between-Subject Correlation Summary:
+
+Top 5 positive correlations with stress:
+  stress_normalized: 1.000
+  IN_VEHICLE: 0.686
+  STILL: 0.665
+  watch_stress_normalized: 0.632
+  Q9_NERV: 0.345
+
+Top 5 negative correlations with stress:
+  frust_12: -0.448
+  SCREEN_ON_SECONDS: -0.555
+  SLEEP_MINUTES: -0.595
+  RUNNING: nan
+  WALKING: nan
